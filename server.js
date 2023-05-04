@@ -6,6 +6,15 @@ const morgan = require("morgan");
 const connectDb = require("./config/db");
 const file_upload = require("express-fileupload");
 const cookie_parser = require("cookie-parser");
+const mongoSanitize = require("express-mongo-sanitize");
+const xss= require("xss-clean");
+const helmet = require("helmet");
+const reteLimit = require("express-rate-limit");
+const hpp = require("hpp");
+const cors= require("cors");
+
+//enable cors
+app.use(cors());
 
 //custom middleware
 
@@ -18,6 +27,35 @@ connectDb();
 
 //body parser
 app.use(express.json());
+
+//sanitize data
+app.use(mongoSanitize());
+
+//prevent xss attacks
+app.use(xss());
+
+//set security headers
+app.use(helmet());
+
+//rate limiting
+
+const limiter = reteLimit({
+  windowMs: 10 * 60 * 1000, //10 minutes
+  max: 100,
+
+});
+
+app.use(limiter);
+
+//prevent http param pollution
+app.use(hpp());
+
+
+
+
+
+
+
 
 //file upload middleware
 
@@ -34,9 +72,11 @@ app.use(express.static(`${__dirname}/public`));
 const bootcamp_routes = require("./routes/bootcampRoute");
 const course_routes = require("./routes/courseRoute");
 const auth_routes = require("./routes/authRoute");
+const user_routes = require("./routes/userRoute");
 app.use("/api/v1/bootcamps", bootcamp_routes);
 app.use("/api/v1/courses", course_routes);
 app.use("/api/v1/auth", auth_routes);
+app.use("/api/v1/users", user_routes);
 
 //custom error handler
 // app.use(errorHandler);

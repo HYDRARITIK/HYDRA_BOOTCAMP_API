@@ -96,15 +96,95 @@ module.exports.resetPassword = asyncHandler(async (req, res, next) => {
     return next(new errorResp("Invalid token", 400));
   }
 
-    //set new password
-    user.password = req.body.password;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
+  //set new password
+  user.password = req.body.password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
 
-    await user.save();
+  await user.save();
 
-    sendTokenResponse(user, 200, res);
+  sendTokenResponse(user, 200, res);
 });
+
+//@desc    update details
+//@route    Patch /api/v1/auth/updatedetails
+//@access   Private
+
+module.exports.updateDetails = asyncHandler(async (req, res, next) => {
+  const fieldToUpdate = {
+    name: req.body.name,
+    email: req.body.email,
+  };
+
+  //user is already logged in so we can get the id from req.user.id
+
+  const user = await User.findByIdAndUpdate(req.user.id, fieldToUpdate, {
+    new: true,
+    runValidators: true,
+  });
+
+  if (!user) {
+    return next(new errorResp("User not found", 404));
+  }
+
+  res.status(200).json({ success: true, data: user });
+});
+
+//@desc    update password
+//@route    Patch /api/v1/auth/updatepassword
+//@access   Private
+
+module.exports.updatePassword = asyncHandler(async (req, res, next) => {
+  const { currentPassword, newPassword } = req.body;
+  const user = await User.findById(req.user.id).select("+password");
+  //now password is hashed so we have to match it
+
+  const isMatch = await user.matchPassword(currentPassword);
+  if (!isMatch) {
+    return next(new errorResp("Password is incorrect", 401));
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  sendTokenResponse(user, 200, res);
+});
+
+
+
+
+
+//@desc    logout user
+//@route    GET /api/v1/auth/logout
+//@access   Private
+
+module.exports.logoutUser = asyncHandler(async (req, res, next) => {
+    //clear cookie
+    //means make new cookie with no token and set it to expire in 10 seconds
+    res.cookie('token', 'none', {
+        expires: new Date(Date.now() + 10 * 1000),
+        httpOnly: true
+    })
+
+    res.status(200).json({success: true, data: {}})
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //function to send token inside cookie
 
